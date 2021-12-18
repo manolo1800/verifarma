@@ -17,7 +17,7 @@ class FarmaciasController extends Controller
      */
     public function farmacia($latitud,$longitud)
     {
-        $query=DB::table('verifarma')
+        $query=DB::table('farmacias')
             ->where([
                 ['latitud','=',$latitud],
                 ['longitud','=',$longitud],
@@ -38,57 +38,50 @@ class FarmaciasController extends Controller
     public function index(Request $request)
     {
         //farmacia mas cercana con respecto al usuario
-
         //datos de direccion usuario
         $longitud = $request->longitud;
         $latitud = $request->latitud;   
         
-        $farmaciaArray=array();
 
-        //buscar la farmacia mas cercana
-        while(empty($farmaciaArray))
+        //consulta para traer todas las farmacias
+        $farmacia=DB::table('farmacias')
+            ->select('id','latitud','longitud')
+        ->get();
+        
+        //convertir el json de la consulta en un array
+        $farmaciaArray=json_decode($farmacia,true);
+        $distancia=array();
+            
+        //calcular la distancia entre el usuario y la farmacias  
+        for($i=0;$i<count($farmaciaArray);$i++)
         {
-            //consulta para traer todas las farmacias
-            $farmacia=DB::table('farmacia')
-                ->select('id','latitud','longitud')
-            ->get();
-
-            //convertir el json de la consulta en un arrtay
-            $farmsciaArray=json_decode($farmacia,true);
-            $distancia=array();
+            $lat2=$farmaciaArray[$i]['latitud'];
+            $lon2=$farmaciaArray[$i]['longitud'];
+            $theta = $longitud - $lon2;
+            $dist = sin(deg2rad($latitud)) * sin(deg2rad($lat2)) +  cos(deg2rad($latitud)) * cos(deg2rad($lat2)) * cos(deg2rad($theta));
+            $dist = acos($dist);
+            $dist = rad2deg($dist);
+            $miles = $dist * 60 * 1.1515;
             
-            //calcular la distancia entre el usuario y la farmacias  
-            for($i=0;$i<count($farmaciaArray);$i++)
-            {
-                $lat2=$farmaciaArray[$i]['latitud'];
-                $lon2=$farmaciaArray[$i]['longitud'];
-
-                $theta = $longitud - $lon2;
-                $dist = sin(deg2rad($latitud)) * sin(deg2rad($lat2)) +  cos(deg2rad($latitud)) * cos(deg2rad($lat2)) * cos(deg2rad($theta));
-                $dist = acos($dist);
-                $dist = rad2deg($dist);
-                $miles = $dist * 60 * 1.1515;
+            $distance=[
+                'distancia'=>($miles*1.609344)*1000,
+                'latitud'=>$farmaciaArray[$i]['latitud'],
+                'longitud'=>$farmaciaArray[$i]['longitud'],
                 
-                $distance=[
-                    'distancia'=>($miles*1.609344)*1000,
-                    'latitud'=>$farmaciaArray[$i]['latitud'],
-                    'longitud'=>$farmaciaArray[$i]['longitud'],
-                    
-                ];
-
-                array_push($distancia,$distance);
-                
-            }
-
-            $min=min($distancia);//seleccionar la distancia mas cercana 
+            ];
+            array_push($distancia,$distance);
             
-            $consulta=$this->Distancia($min['latitud'],$min['longitud']);//consultar datos de la farmacia
-            
-            $farmacia=json_decode($consulta,true);
 
         }
+
+        $min=min($distancia);//seleccionar la distancia mas cercana 
+            
+        $consulta=$this->farmacia($min['latitud'],$min['longitud']);//consultar datos de la farmacia
+        
+        $farmacia=json_decode($consulta,true);
+
        
-        return response()->json("hay una farmacia disponible a".round($min['distancia'],2)." metros de tu ubicación");
+        return response()->json("hay una farmacia disponible a ".round($min['distancia'],2)." metros de tu ubicación el nombre es ".$farmacia[0]['nombre']." la direccion es ".$farmacia[0]['direccion']);
         
 
     }
@@ -120,9 +113,9 @@ class FarmaciasController extends Controller
             'direccion'=>$request->direccion,
             'longitud'=>$request->longitud,
             'latitud'=>$request->latitud,
-            // 'created-at'=> now()->toDateTime(),
+            //'created-at'=> now()->toDateTime(),
             ]);
-            return $request->longitud;
+            return response()->json("se ha creado satisfactoriamente la farmacia");
     }
 
     /**
