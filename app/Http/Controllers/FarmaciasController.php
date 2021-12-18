@@ -115,12 +115,14 @@ class FarmaciasController extends Controller
     public function store(Request $request)
     {
         //
-        farmacia::insert([
+            farmacias::insert([
             'nombre'=>$request->nombre,
             'direccion'=>$request->direccion,
-            'longitud'=>$longitud,
-            'created-at'=> now()->toDateTime(),
-        ]);
+            'longitud'=>$request->longitud,
+            'latitud'=>$request->latitud,
+            // 'created-at'=> now()->toDateTime(),
+            ]);
+            return $request->longitud;
     }
 
     /**
